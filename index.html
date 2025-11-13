@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flappy 67</title>
+<style>
+  body {
+    margin: 0;
+    background: #87CEEB;
+    font-family: sans-serif;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  canvas {
+    background: #87CEEB;
+    display: block;
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let bird;
+let pillars;
+let pillarWidth = 60;
+let gap = 150;
+let frame;
+let score;
+let gameOver;
+
+function resetGame() {
+  bird = { x: 80, y: canvas.height/2, radius: 20, velocity: 0, gravity: 0.6, jump: -10 };
+  pillars = [{x: canvas.width, y: Math.random() * (canvas.height-gap-100) + 50}];
+  frame = 0;
+  score = 0;
+  gameOver = false;
+  loop();
+}
+
+function drawBird() {
+  ctx.beginPath();
+  ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI*2);
+  ctx.fillStyle = 'yellow';
+  ctx.fill();
+  ctx.fillStyle = 'black';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('67', bird.x, bird.y);
+  ctx.closePath();
+}
+
+function drawPillars() {
+  ctx.fillStyle = 'green';
+  pillars.forEach(p => {
+    ctx.fillRect(p.x, 0, pillarWidth, p.y); // top
+    ctx.fillRect(p.x, p.y + gap, pillarWidth, canvas.height - p.y - gap); // bottom
+
+    // Draw vertical text SYBAU
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 18px sans-serif';
+    for(let i=0;i<5;i++){
+      ctx.fillText('SYBAU'[i], p.x + pillarWidth/2, 20 + i*25);
+      ctx.fillText('SYBAU'[i], p.x + pillarWidth/2, p.y + gap + 20 + i*25);
+    }
+    ctx.fillStyle = 'green';
+  });
+}
+
+function update() {
+  if(gameOver) return;
+
+  bird.velocity += bird.gravity;
+  bird.y += bird.velocity;
+
+  if(frame % 90 === 0) {
+    pillars.push({x: canvas.width, y: Math.random() * (canvas.height-gap-100) + 50});
+  }
+
+  pillars.forEach((p,i)=>{
+    p.x -= 3;
+
+    if(bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + pillarWidth){
+      if(bird.y - bird.radius < p.y || bird.y + bird.radius > p.y + gap){
+        endGame();
+      }
+    }
+
+    if(p.x + pillarWidth === bird.x){
+      score++;
+    }
+  });
+
+  if(pillars[0].x + pillarWidth < 0){
+    pillars.shift();
+  }
+
+  if(bird.y + bird.radius > canvas.height || bird.y - bird.radius < 0){
+    endGame();
+  }
+
+  frame++;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBird();
+  drawPillars();
+
+  ctx.fillStyle = 'black';
+  ctx.font = '20px sans-serif';
+  ctx.fillText('Score: ' + score, canvas.width - 100, 30);
+}
+
+function loop() {
+  update();
+  draw();
+  if(!gameOver) requestAnimationFrame(loop);
+}
+
+function endGame() {
+  gameOver = true;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 40px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('nephew🫩🥀', canvas.width/2, canvas.height/2 - 20);
+  ctx.font = 'bold 30px sans-serif';
+  ctx.fillText('Score: ' + score, canvas.width/2, canvas.height/2 + 30);
+  ctx.font = '20px sans-serif';
+  ctx.fillText('Click or press any key to restart', canvas.width/2, canvas.height/2 + 70);
+}
+
+// Controls
+function flap() {
+  if(!gameOver){
+    bird.velocity = bird.jump;
+  } else {
+    resetGame();
+  }
+}
+
+document.addEventListener('keydown', flap);
+document.addEventListener('mousedown', flap);
+
+resetGame();
+</script>
+</body>
+</html>
