@@ -4,297 +4,171 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Flappy Ball 67 — SYBAU</title>
+
 <style>
   html,body {
     height:100%;
     margin:0;
-    font-family: "Segoe UI", Roboto, Arial, sans-serif;
     background:#000;
-    color:#fff;
+    overflow:hidden;
+    font-family: Arial, sans-serif;
   }
 
-  /* Use the uploaded image as the page background.
-     The file path below is the local path you provided. */
-  body.game-on {
+  body {
     background-image: url('/mnt/data/533087D8-BBA6-440C-A5A1-20777FC4E23B.jpeg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
   }
 
-  /* center container */
-  .center {
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    height:100vh;
-    width:100%;
-    box-sizing:border-box;
-  }
-
-  /* Login screen */
-  #login {
-    background: rgba(0,0,0,0.65);
-    padding:28px;
-    border-radius:12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.7);
-    text-align:center;
-    width:320px;
-  }
-  #login h1 { margin:0 0 12px; font-size:20px; letter-spacing:1px; }
-  #login input {
-    width:100%;
-    padding:10px 12px;
-    margin:8px 0;
-    border-radius:8px;
-    border:1px solid #444;
-    background:#111;
-    color:#fff;
-    box-sizing:border-box;
-    font-size:14px;
-  }
-  #login button {
-    width:100%;
-    padding:10px;
-    margin-top:10px;
-    border-radius:8px;
-    border:0;
-    background:#0b84ff;
-    color:#fff;
-    font-weight:700;
-    cursor:pointer;
-  }
-  #login .err { color:#ff7b7b; margin-top:8px; font-size:13px; min-height:18px; }
-
-  /* Canvas container overlays */
   #gameWrap {
     position:relative;
     width:100%;
     height:100vh;
-    overflow:hidden;
-    display:none;
   }
 
   canvas {
-    display:block;
     width:100%;
-    height:100vh;
-    image-rendering: optimizeSpeed;
+    height:100%;
+    display:block;
   }
 
-  /* Top score display */
   #hud {
     position:absolute;
-    top:12px;
+    top:15px;
     left:50%;
     transform:translateX(-50%);
-    font-size:22px;
-    font-weight:700;
-    text-shadow: 0 3px 6px rgba(0,0,0,0.6);
-    letter-spacing:1px;
+    font-size:26px;
+    font-weight:bold;
+    color:white;
+    text-shadow:0 4px 8px rgba(0,0,0,0.7);
   }
 
-  /* GameOver overlay */
   #gameOver {
     position:absolute;
-    left:50%;
     top:50%;
+    left:50%;
     transform:translate(-50%,-50%);
-    background: rgba(0,0,0,0.75);
-    padding:22px;
+    background:rgba(0,0,0,0.7);
+    padding:25px;
     border-radius:12px;
     text-align:center;
     display:none;
-    width:320px;
+    width:300px;
+    color:white;
   }
-  #gameOver h2 { margin:0 0 8px; font-size:20px; }
-  #gameOver p { margin:0 0 12px; color:#ddd; }
+
   #restartBtn {
-    background:#00c853;
-    color:#012;
-    border:0;
-    padding:10px 16px;
+    margin-top:15px;
+    padding:10px 20px;
+    border:none;
     border-radius:8px;
+    font-weight:bold;
     cursor:pointer;
-    font-weight:700;
+    background:#00ff88;
   }
-
-  /* small footer help */
-  #help {
-    position:absolute;
-    bottom:10px;
-    left:12px;
-    font-size:13px;
-    opacity:0.9;
-  }
-
-  @media (max-width:720px) {
-    #login { width:90%; }
-    #gameOver { width:86%; }
-  }
-
 </style>
 </head>
+
 <body>
-  <div id="login" class="center" style="display:flex;align-items:center;justify-content:center;height:100vh;">
-    <div>
-      <h1>Log in to play — Flappy Ball 67</h1>
-      <input id="username" placeholder="Username" autocomplete="off" />
-      <input id="password" placeholder="Password" type="password" />
-      <button id="loginBtn">Login</button>
-      <div class="err" id="errMsg"></div>
-      <div style="margin-top:10px; font-size:12px; color:#aaa">
-        (Use username <code>D4mZ8K</code> and password <code>4aPTaH110866</code>)
-      </div>
-    </div>
+
+<div id="gameWrap">
+  <canvas id="c"></canvas>
+
+  <div id="hud">Score: <span id="score">0</span></div>
+
+  <div id="gameOver">
+    <h2>Game Over</h2>
+    <p id="goText">You scored 0 points, nephew🫩🥀</p>
+    <button id="restartBtn">Restart</button>
   </div>
-
-  <div id="gameWrap">
-    <div id="hud">Score: <span id="score">0</span></div>
-    <canvas id="c"></canvas>
-
-    <div id="gameOver">
-      <h2 id="goTitle">Game Over</h2>
-      <p id="goText">You scored 0 points, nephew🫩🥀</p>
-      <button id="restartBtn">Restart</button>
-    </div>
-
-    <div id="help">Space or Tap to jump — avoid pipes with SYBAU</div>
-  </div>
+</div>
 
 <script>
 (() => {
-  // Credentials
-  const CORRECT_USER = "D4mZ8K";
-  const CORRECT_PASS = "4aPTaH110866";
 
-  // DOM
-  const loginContainer = document.getElementById('login');
-  const gameWrap = document.getElementById('gameWrap');
-  const loginBtn = document.getElementById('loginBtn');
-  const errMsg = document.getElementById('errMsg');
-  const userField = document.getElementById('username');
-  const passField = document.getElementById('password');
-
-  // Start game if login correct
-  loginBtn.addEventListener('click', tryLogin);
-  passField.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(); });
-  userField.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(); });
-
-  function tryLogin(){
-    const u = userField.value.trim();
-    const p = passField.value;
-    if (u === CORRECT_USER && p === CORRECT_PASS) {
-      // hide login, show game
-      loginContainer.style.display = 'none';
-      gameWrap.style.display = 'block';
-      document.body.classList.add('game-on'); // enable background image class
-      initGame();
-    } else {
-      errMsg.textContent = 'Wrong username or password.';
-      shake(loginContainer);
-    }
-  }
-
-  function shake(el){
-    el.style.transition = 'transform 0.05s';
-    el.style.transform = 'translateX(-6px)';
-    setTimeout(()=> el.style.transform = 'translateX(6px)', 60);
-    setTimeout(()=> { el.style.transform = ''; el.style.transition=''; }, 130);
-  }
-
-  /* -------------------------
-     Game code (canvas)
-     ------------------------- */
   let canvas, ctx, W, H, DPR;
-  let frame = 0;
-  let running = false;
-
-  // Game objects & constants
-  let ball;
-  const GRAV = 0.55;
-  const JUMP = -10.5;
-  const PIPE_SPEED = 2.6;
-  const PIPE_GAP = 140;
-  const PIPE_WIDTH = 80;
-  const SPAWN_INTERVAL = 110; // frames
-
   let pipes = [];
+  let ball;
   let score = 0;
-  let bestScore = 0;
+  let running = false;
+  let frame = 0;
 
-  // gameOver elements
-  const goOverlay = document.getElementById('gameOver');
-  const goText = document.getElementById('goText');
-  const restartBtn = document.getElementById('restartBtn');
-  const scoreEl = document.getElementById('score');
+  const GRAV = 0.5;
+  const JUMP = -7.8;          // SMALLER JUMP
+  const PIPE_GAP = 185;       // BIGGER GAP
+  const PIPE_SPEED = 2.6;
+  const PIPE_WIDTH = 80;
+  const SPAWN_INTERVAL = 105;
 
-  // background image: using your uploaded local path as requested
-  const bgImgPath = '/mnt/data/533087D8-BBA6-440C-A5A1-20777FC4E23B.jpeg';
   const bg = new Image();
-  bg.src = bgImgPath;
+  bg.src = '/mnt/data/533087D8-BBA6-440C-A5A1-20777FC4E23B.jpeg';
 
-  // Resize and setup
-  function setupCanvas(){
-    canvas = document.getElementById('c');
+  const goOverlay = document.getElementById("gameOver");
+  const restartBtn = document.getElementById("restartBtn");
+  const scoreEl = document.getElementById("score");
+  const goText = document.getElementById("goText");
+
+  restartBtn.onclick = restart;
+
+  function setupCanvas() {
+    canvas = document.getElementById("c");
     DPR = window.devicePixelRatio || 1;
+
     function resize() {
       W = window.innerWidth;
       H = window.innerHeight;
-      canvas.width = Math.floor(W * DPR);
-      canvas.height = Math.floor(H * DPR);
-      canvas.style.width = W + 'px';
-      canvas.style.height = H + 'px';
-      ctx = canvas.getContext('2d');
+      canvas.width = W * DPR;
+      canvas.height = H * DPR;
+      canvas.style.width = W + "px";
+      canvas.style.height = H + "px";
+      ctx = canvas.getContext("2d");
       ctx.setTransform(DPR,0,0,DPR,0,0);
-      ctx.textBaseline = 'middle';
+      ctx.textBaseline = "middle";
     }
-    window.addEventListener('resize', resize);
+
+    window.addEventListener("resize", resize);
     resize();
   }
 
-  // Ball object
-  function createBall(){
+  function createBall() {
     return {
-      x: Math.max(70, W * 0.25),
-      y: H/2,
+      x: W * 0.25,
+      y: H / 2,
       r: Math.min(28, Math.floor(Math.min(W,H)/18)),
       vy: 0,
       alive: true,
       draw() {
-        // glow shadow
         ctx.save();
         ctx.beginPath();
-        ctx.shadowColor = 'rgba(0,200,255,0.25)';
-        ctx.shadowBlur = 20;
-        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = "rgba(0,150,255,0.5)";
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = "white";
         ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        // circle border
         ctx.beginPath();
-        ctx.strokeStyle = '#0bf';
+        ctx.strokeStyle = "#00ccff";
         ctx.lineWidth = 3;
-        ctx.arc(this.x, this.y, this.r-1.5, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.r-1.5, 0, Math.PI*2);
         ctx.stroke();
 
-        // draw 67 centered
-        ctx.fillStyle = '#001020';
-        ctx.font = `bold ${Math.floor(this.r*0.95)}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.fillText('67', this.x, this.y + 1);
+        ctx.fillStyle = "#001020";
+        ctx.font = `bold ${this.r}px Arial`;
+        ctx.textAlign = "center";
+        ctx.fillText("67", this.x, this.y+1);
       },
       update() {
         this.vy += GRAV;
         this.y += this.vy;
-        // floor/ceiling collisions
+
         if (this.y + this.r > H) {
           this.y = H - this.r;
           this.vy = 0;
-          this.alive = false;
           die();
         }
+
         if (this.y - this.r < 0) {
           this.y = this.r;
           this.vy = 0;
@@ -303,208 +177,141 @@
       jump() {
         this.vy = JUMP;
       }
-    };
+    }
   }
 
-  // Pipe object: top and bottom are drawn as rectangles; text SYBAU vertically
-  function createPipe(x){
-    const minY = 80;
-    const maxY = H - 80 - PIPE_GAP;
-    const top = minY + Math.random() * Math.max(0, maxY - minY);
+  function createPipe(x) {
+    const minY = 70;
+    const maxY = H - 70 - PIPE_GAP;
+    const top = minY + Math.random() * (maxY - minY);
+
     return {
-      x: x,
+      x,
       topY: top,
       bottomY: top + PIPE_GAP,
       width: PIPE_WIDTH,
       passed: false,
-      draw(){
-        // top pipe
-        ctx.fillStyle = '#0b6a32'; // greenish
+      draw() {
+        ctx.fillStyle = "#0d7a3b";
+
         ctx.fillRect(this.x, 0, this.width, this.topY);
-        // bottom pipe
         ctx.fillRect(this.x, this.bottomY, this.width, H - this.bottomY);
 
-        // draw SYBAU vertically centered on the visible pipe body
         ctx.save();
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 20px Arial';
-        ctx.textAlign = 'center';
+        ctx.fillStyle = "white";
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
 
-        // top pipe letters
-        const letters = ['S','Y','B','A','U'];
-        // draw vertically along center of pipe width
+        const letters = ["S","Y","B","A","U"];
         const cx = this.x + this.width/2;
-        // for top pipe, position letters from center of pipe body downward
-        const topPipeHeight = Math.max(0, this.topY);
-        let startYTop = Math.max(12, topPipeHeight/2 - (letters.length*12));
-        for (let i=0;i<letters.length;i++){
-          ctx.fillText(letters[i], cx, startYTop + i*24);
-        }
 
-        // bottom pipe letters: draw from bottom pipe top downward
-        const bottomPipeHeight = Math.max(0, H - this.bottomY);
-        let startYBot = this.bottomY + 12;
-        for (let i=0;i<letters.length;i++){
-          ctx.fillText(letters[i], cx, startYBot + i*24);
-        }
+        let y1 = this.topY/2 - 40;
+        for (let i=0;i<letters.length;i++)
+          ctx.fillText(letters[i], cx, y1 + i*24);
+
+        let y2 = this.bottomY + 20;
+        for (let i=0;i<letters.length;i++)
+          ctx.fillText(letters[i], cx, y2 + i*24);
 
         ctx.restore();
       },
-      update(){
+      update() {
         this.x -= PIPE_SPEED;
       },
-      isOffscreen(){
-        return this.x + this.width < -10;
-      }
-    };
+      isOff() { return this.x + this.width < -20; }
+    }
   }
 
-  function spawnPipe(){
+  function spawnPipe() {
     pipes.push(createPipe(W + 40));
   }
 
-  // Collision detection (circle vs rect)
   function circleRectCollision(cx, cy, r, rx, ry, rw, rh) {
-    // find closest point on rect to circle center
-    const closestX = Math.max(rx, Math.min(cx, rx + rw));
-    const closestY = Math.max(ry, Math.min(cy, ry + rh));
-    const dx = cx - closestX;
-    const dy = cy - closestY;
-    return (dx*dx + dy*dy) <= (r*r);
+    const closestX = Math.max(rx, Math.min(cx, rx+rw));
+    const closestY = Math.max(ry, Math.min(cy, ry+rh));
+    const dx = cx - closestX, dy = cy - closestY;
+    return dx*dx + dy*dy <= r*r;
   }
 
-  function die(){
+  function die() {
     running = false;
-    showGameOver();
-  }
-
-  function showGameOver(){
-    goOverlay.style.display = 'block';
     goText.textContent = `You scored ${score} points, nephew🫩🥀`;
+    goOverlay.style.display = "block";
   }
 
-  function restart(){
+  function restart() {
     pipes = [];
-    frame = 0;
     score = 0;
     scoreEl.textContent = score;
+    frame = 0;
+    goOverlay.style.display = "none";
     ball = createBall();
-    goOverlay.style.display = 'none';
     running = true;
     loop();
   }
 
-  // Main render loop
-  function loop(){
-    if (!ctx) return;
+  function loop() {
     frame++;
 
-    // draw background (image) scaled to cover
     ctx.clearRect(0,0,W,H);
+
     if (bg.complete) {
-      // draw image to cover entire canvas while preserving aspect ratio
       const iw = bg.width, ih = bg.height;
-      if (iw && ih) {
-        const scale = Math.max(W/iw, H/ih);
-        const sw = iw*scale, sh = ih*scale;
-        const sx = (W - sw)/2, sy = (H - sh)/2;
-        ctx.drawImage(bg, sx, sy, sw, sh);
-      }
-    } else {
-      // fallback
-      ctx.fillStyle = '#002b3a';
-      ctx.fillRect(0,0,W,H);
+      const scale = Math.max(W/iw, H/ih);
+      const sw = iw*scale, sh = ih*scale;
+      ctx.drawImage(bg, (W-sw)/2, (H-sh)/2, sw, sh);
     }
 
-    // semi-dark overlay to help contrast
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.fillRect(0,0,W,H);
 
-    // spawn pipes
     if (frame % SPAWN_INTERVAL === 0) spawnPipe();
 
-    // update pipes
-    for (let i=pipes.length-1;i>=0;i--){
+    for (let i=pipes.length-1; i>=0; i--) {
       const p = pipes[i];
       p.update();
       p.draw();
 
-      // check collisions with ball
       if (circleRectCollision(ball.x, ball.y, ball.r, p.x, 0, p.width, p.topY) ||
-          circleRectCollision(ball.x, ball.y, ball.r, p.x, p.bottomY, p.width, H - p.bottomY)) {
-        ball.alive = false;
+          circleRectCollision(ball.x, ball.y, ball.r, p.x, p.bottomY, p.width, H-p.bottomY)) {
         die();
       }
 
-      // update score when ball passes
       if (!p.passed && p.x + p.width < ball.x) {
         p.passed = true;
         score++;
         scoreEl.textContent = score;
       }
 
-      if (p.isOffscreen()) pipes.splice(i,1);
+      if (p.isOff()) pipes.splice(i,1);
     }
 
-    // draw ball + update if running
     ball.draw();
     if (running) ball.update();
 
-    // top center score is updated above in DOM; we could also draw on canvas if wanted.
-
-    // continue loop if running
-    if (running) {
-      requestAnimationFrame(loop);
-    }
+    if (running) requestAnimationFrame(loop);
   }
 
-  // Input handlers: spacebar and click/tap
-  function bindInputs(){
-    // click or touch anywhere -> jump (if playing) or restart from game over
-    window.addEventListener('mousedown', onInteract);
-    window.addEventListener('touchstart', onInteract, {passive:true});
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        onInteract();
-      } else if (e.code === 'KeyR' && !running) {
-        // quick restart with R
-        restart();
-      }
+  function startInput() {
+    window.addEventListener("mousedown", jump);
+    window.addEventListener("touchstart", jump, {passive:true});
+    window.addEventListener("keydown", (e)=>{
+      if (e.code === "Space") jump();
+      if (!running && e.code==="KeyR") restart();
     });
   }
 
-  function onInteract(){
-    if (!running) {
-      // If game over, clicking restart overlay button recommended; but allow quick restart
-      restart();
-      return;
-    }
+  function jump() {
+    if (!running) return restart();
     ball.jump();
   }
 
-  // Initialize game after login
-  function initGame(){
-    setupCanvas();
-    bindInputs();
-    ball = createBall();
-    pipes = [];
-    frame = 0;
-    score = 0;
-    scoreEl.textContent = score;
-    running = true;
-    // preload bg then start
-    if (bg.complete) {
-      loop();
-    } else {
-      bg.onload = () => loop();
-      bg.onerror = () => loop(); // even if error, run with solid background
-    }
-    restartBtn.addEventListener('click', restart);
-  }
+  setupCanvas();
+  startInput();
+  restart();
 
-  // Expose nothing globally
 })();
 </script>
+
 </body>
 </html>
